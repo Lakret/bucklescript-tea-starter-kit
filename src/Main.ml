@@ -107,9 +107,9 @@ end
 (** wiring everything together: BlmStyles helpers are now available + changed [class'] fun
 definition with support for [is-] css classes. *)
 
-open BlmStyles
+(* open BlmStyles
 module TEAExtensions = MakeTEAExtensions(BlmStyles)
-open TEAExtensions
+open TEAExtensions *)
 
 (* This is just a helper function for the view, a simple function that returns a button based on some argument *)
 
@@ -117,8 +117,7 @@ let view_button ?is title msg =
   let is_style_classes =
     Option.map is (fun is_styles -> 
       is_styles 
-      |> List.map is_to_style 
-      |> combine_css_classes)
+      |> BlmModifiers.combine)
     |. Option.getWithDefault ""
   in
   button
@@ -178,6 +177,7 @@ let show_if cond node = if cond then node else noNode
 (* This is the main callback to generate the virtual-dom.
   This returns a virtual-dom node that becomes the view, only changes from call-to-call are set on the real DOM for efficiency, this is also only called once per frame even with many messages sent in within that frame, otherwise does nothing *)
 let view model =
+  (* let open BlmModifiers in *)
   div 
     [class' "section"]
     [
@@ -188,8 +188,8 @@ let view model =
       make_level
         ~props:[]
         ~left_items:[
-          view_button ~is:[`IsPrimary; `IsLarge] "Increment" Increment;
-          view_button ~is:[`IsInfo; `IsLarge] "Decrement" Decrement;
+          view_button ~is:[`IsPrimary; `IsLarge; `IsRadiusless ] "Increment" Increment;
+          view_button ~is:[`IsInfo; `IsLarge ] "Decrement" Decrement;
         ] 
         ~right_items:[
           view_button ~is:[`IsWarning; `IsLarge] "Set to 42" (Set 42);
