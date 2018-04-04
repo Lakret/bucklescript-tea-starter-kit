@@ -1,30 +1,167 @@
-(* This line opens the Tea.App modules into the current scope for Program access functions and types *)
 open Tea.App
-
-(* This opens the Elm-style virtual-dom functions and types into the current scope *)
 open Tea.Html
 
 module Option = Belt.Option
 
-(* Let's create a new type here to be our main message type that is passed around *)
-type msg =
-  | Increment  (* This will be our message to increment the counter *)
-  | Decrement  (* This will be our message to decrement the counter *)
-  | Reset      (* This will be our message to reset the counter to 0 *)
-  | Set of int (* This will be out message to set the counter to a specific value *)
-  [@@bs.deriving {accessors}] (* This is a nice quality-of-life addon from Bucklescript, it will generate function names for each constructor name, optional, but nice to cut down on code, this is unused in this example but good to have regardless *)
+type msg = ..
+type msg +=
+  | Increment
+  | Decrement
+  | Reset
+  | Set of int
+  [@@bs.deriving {accessors}]
 
-(* This is optional for such a simple example, but it is good to have an `init` function to define your initial model default values, the model for Counter is just an integer *)
-let init () = 4
+let init () = (4, Tea_cmd.none)
 
-(* This is the central message handler, it takes the model as the first argument *)
-let update model = function (* These should be simple enough to be self-explanatory, mutate the model based on the message, easy to read and follow *)
+let update model = 
+  function
   | Increment -> model + 1
   | Decrement -> model - 1
   | Reset -> 0
   | Set v -> v
+  | _ -> model
 
 (* IDEAS FOR HIGH LEVEL COMPONENTS LIBRARY AND BULMA BINDINGS *)
+
+(* https://caml.inria.fr/pub/docs/manual-ocaml/extn.html#sec265 *)
+(* type extensible_message = ..
+type extensible_message += Msg1 | Msg2
+type extensible_message += Msg3 of float * string *)
+
+type union_model = ..
+
+(* Left module *)
+type union_model += | LMM of string
+type left_module_msg = [ `LM1 | `LM2 of string ]
+let left_module_update model msg = 
+  match model with
+  | LMM _ -> begin
+    match msg with
+    | `LM1 -> Some model
+    | `LM2 msg_state -> Some (LMM msg_state)
+    | _ -> None
+  end 
+  | _ -> None
+let left_view =
+  function
+  | LMM state -> 
+    Some (text state)
+  | _ -> None
+
+(* Right module *)
+type union_model += | RMM of int
+type right_module_msg = [ `RM1 | `RM2 of int ]
+let right_module_update model msg = 
+  match model with
+  | RMM state -> begin
+    match msg with
+    | `RM1 -> Some (RMM (state + 1))
+    | `RM2 msg_state -> Some (RMM msg_state)
+    | _ -> None
+  end 
+  | _ -> None
+let right_view = 
+  function
+  | RMM state -> 
+    Some (text @@ string_of_int @@ state)
+  | _ -> None
+
+(* Tying them up *)
+type union_msg = [ left_module_msg | right_module_msg ]
+let update_funs = [ left_module_update; right_module_update]
+let apply_updates models msg = 
+  models 
+  |> List.fold_left 
+    (fun updated_models model ->
+      let current_updated = List.map (fun uf -> uf model msg) update_funs in
+      let updated_model = List.find Option.isSome current_updated in
+      (Option.getExn updated_model)::updated_models)
+    []
+ 
+(* TODO: what's the type of test view? maybe we need to make union_msg an open ADT as well and message type should be a list of those?
+
+TODO: another approach is to make union_msg as open GADT where GADT's type parameter is corresponding model
+
+TODO: or maybe we should use First Class modules (probably!)?  *)
+let test_view _ = h1 [] [text "foo"]
+  (* let lv = 
+  div [] [
+
+  ] *)
+
+
+let test_prg: Web.Node.t Js.null_undefined -> unit -> union_msg programInterface = 
+  beginnerProgram {
+    model = [LMM "startState"; RMM 0];
+    update = apply_updates;
+    view = test_view
+  }
+
+
+(* TODO: Scaling ELM architecture with First Class Modules *)
+
+
+module type Subapp = sig
+  type msg
+  type model
+
+  val model: model
+  val update: model -> msg -> model
+  val view: model -> msg Vdom.t
+end
+
+module type FullSubapp = sig
+  include Subapp
+
+  type flags
+
+  val init: flags -> model * msg Tea_cmd.t
+  val updateFull: model -> msg -> model * msg Tea_cmd.t
+  val subscriptions: model -> msg Tea_sub.t
+end
+
+module type SubappInstance = sig
+  module Subapp: Subapp
+
+  val model: Subapp.model
+end
+
+module LeftSubapp: Subapp = struct
+  type msg = | Up | Down
+  type model = int
+
+  let model = 12
+  let update model =
+    function
+    | Up -> model + 1
+    | Down -> model - 1
+
+  let view model = 
+    div [] [
+      button [onClick Up] [text "up"];
+      button [onClick Down] [text "down"];
+      text @@ string_of_int @@ model
+    ]
+end
+
+module RightSubapp: Subapp = struct
+  type msg = | Add
+  type model = string
+
+  let model = "some string"
+  let update model =
+    function
+    | Add -> model ^ "!"
+
+  let view model = 
+    div [] [
+      button [onClick Add] [text "add !"];
+      text model
+    ]
+end
+
+
+
 
 (** [BlmStyles] module and module type provide helper for [is-] and [has-] css classes. 
 We use polymorphic variants to share labels between different variant types. *)
@@ -72,6 +209,7 @@ end
 (** Makes an extension and/or shadows functions from Tea.Html; 
 extension is parametrized by styles module *)
 module MakeTEAExtensions(Styles: Styles): sig
+  type t
 
   (** replaces [class' cls] with [class' is_style cls], where [is_style] is an optional
       list of [Style.style]s. *)
@@ -79,6 +217,8 @@ module MakeTEAExtensions(Styles: Styles): sig
 
   (** Combines multiple CSS classes (represented as string) together.  *)
   val combine_css_classes: string list -> string
+
+  val getT: unit -> t
 
 end = struct
   (* Helpers *)
@@ -102,14 +242,29 @@ end = struct
       | Some styles -> " " ^ is_styles_to_classes ~is:styles
     in
     class' @@ cls ^ add_styles
+
+  type t = int
+  let getT () = 12
 end
 
 (** wiring everything together: BlmStyles helpers are now available + changed [class'] fun
 definition with support for [is-] css classes. *)
 
-(* open BlmStyles
+open BlmStyles
 module TEAExtensions = MakeTEAExtensions(BlmStyles)
-open TEAExtensions *)
+
+(* Functors are applicative in OCaml:
+
+module TEAExtensions2 = MakeTEAExtensions(BlmStyles)
+let foo = 
+  let t1 = TEAExtensions.getT in
+  let t2 = TEAExtensions2.getT in
+  t1 == t2
+  
+Can make them generative (so that TEAExtension.t will not be the same as TEAExtension2.t) by adding () after frist
+functor parameter and passing it on modules generation. *)
+
+open! TEAExtensions
 
 (* This is just a helper function for the view, a simple function that returns a button based on some argument *)
 
@@ -174,8 +329,6 @@ let hero () =
 
 let show_if cond node = if cond then node else noNode
 
-(* This is the main callback to generate the virtual-dom.
-  This returns a virtual-dom node that becomes the view, only changes from call-to-call are set on the real DOM for efficiency, this is also only called once per frame even with many messages sent in within that frame, otherwise does nothing *)
 let view model =
   (* let open BlmModifiers in *)
   div 
@@ -198,17 +351,16 @@ let view model =
             view_button ~is:[`IsDanger; `IsLarge] "Reset" Reset 
         ];
     ]
-  
 
-(* This is the main function, it can be named anything you want but `main` is traditional.
-  The Program returned here has a set of callbacks that can easily be called from
-  Bucklescript or from javascript for running this main attached to an element,
-  or even to pass a message into the event loop.  You can even expose the
-  constructors to the messages to javascript via the above [@@bs.deriving {accessors}]
-  attribute on the `msg` type or manually, that way even javascript can use it safely. *)
-let main =
-  beginnerProgram { (* The beginnerProgram just takes a set model state and the update and view functions *)
-    model = init (); (* Since model is a set value here, we call our init function to generate that value *)
-    update;
+let main = TEAFirstClassModules.FullApp.app
+
+  (* beginnerProgram {
+    model; update; view
+  } *)
+(* 
+  standardProgram {
+    init;
+    update = (fun model msg -> (update model msg, Tea_cmd.none));
     view;
-  }
+    subscriptions = (fun _model -> Tea_sub.none)
+  } *)
