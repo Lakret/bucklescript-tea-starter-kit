@@ -103,3 +103,48 @@ opam config exec --switch <switch> -- <command>  # for one command
 ```
 
 This only affects the environment.
+
+https://redex.github.io/
+
+
+
+
+How to encode lists in modules? 
+
+<!-- module type AnyModule = sig end;;
+
+module type rec ModuleList = sig
+  module type Elem
+end;;
+
+module Nil (Elem: AnyModule): ModuleList = struct
+  module type Elem = module type of Elem
+end;;
+- module Nil : functor (Elem : AnyModule) -> ModuleList  
+
+module Cons (Tail: ModuleList) (Elem: AnyModule): ModuleList = struct
+  module type Elem = module type of Elem
+end -->
+
+<!-- empty = λfx.x
+append = λalfx.fa(lfx)
+head = λl.l(λab.a)(any expression)
+isempty = λl.l(λab.false)true -->
+<!-- 
+module type AnyModule = sig end;;
+module Empty = 
+  functor 
+    (F: functor (X : AnyModule) -> AnyModule) 
+    (X: AnyModule) -> (struct include X end : module type of X);;
+- module Empty : functor (F : functor (X : AnyModule) -> AnyModule) (X : AnyModule) -> AnyModule   
+module Append = 
+  functor 
+    (Head: AnyModule) 
+    (Tail: functor (F : functor (X : AnyModule) -> AnyModule) (X : AnyModule) -> AnyModule)
+    (F : functor (X : AnyModule) -> AnyModule)
+    (X : AnyModule)
+    : functor (X : AnyModule) -> AnyModule -> 
+    struct 
+
+    end;;
+ -->
