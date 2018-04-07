@@ -12,4 +12,4 @@ val children: t -> t list
 val content: t -> content
 
 (** list of [modifiers t] applied on the container *)
-val modifiers: t -> BlmModifiers.t list
+val modifiers: t -> BlmModifiers.modifier list

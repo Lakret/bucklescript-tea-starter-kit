@@ -1,130 +1,96 @@
-(** Bulma columns helpers
-https://bulma.io/documentation/columns/basics/ *)
-
 open Tea.Html
 open BlmNumbers
 open BlmCommon
+open MakeModifierHelpers
 
-type column_size =
-  [ `Narrow
-  | `Half
-  | `OneThird
-  | `OneQuarter
-  | `ThreeQuarters
-  | `OneFifth
-  | `TwoFifths
-  | `ThreeFifths
-  | `FourFifths
-  | column_sizes_numbers ]
+module BlmColumnInner = struct
+  type column_size = 
+    [ `Narrow | `Half | `OneThird | `OneQuarter | `ThreeQuarters 
+    | `OneFifth | `TwoFifths | `ThreeFifths | `FourFifths 
+    | column_sizes_numbers ]
 
-(** Modifiers that set size or offset for a column:
-https://bulma.io/documentation/columns/sizes/ *)
-type column_size_modifier = 
-  [ `Size of column_size (** [is-...], used for column sizes  *)
-  | `Offset of column_size (** [is-offset-...], used to specify offset between columns *) ]
+  type column_size_modifier =  [ `Size of column_size | `Offset of column_size ]
 
-(** Column responsiveness modifiers:
-https://bulma.io/documentation/columns/responsiveness/ *)
+  type column_viewport = [ `Mobile | `Desktop | `Widescreen | `FullHD ]
 
-(** Responsiveness: column viewport selectors *)
-type column_viewport = 
-  [ `Mobile (** [is-mobile], columns are stacked on mobile, unless this modifier is used *)
-  | `Desktop (** [is-desktop], this class makes columns stack on both mobile and tablet *)
-  | `Widescreen (** [is-widescreen] class *)
-  | `FullHD (** [is-fullhd] class *) ]
+  type column_responsive_modifier = [ `Is of column_size * column_viewport ]
 
-(** Responsive size and column stacking modifiers *)
+  type columns_responsive_modifier = [ `StackUpTo of column_viewport ]
 
-(** [is-one-quarter-desktop], [is-half-mobile], ... on column. 
-Specifies sizes for different viewport widths. *) 
-type column_responsive_modifier = 
-  [ `Is of column_size * column_viewport ]
+  type column_gap = [ `Gapless | `GapSize of gap_sizes_numbers ]
 
-(** [is-mobile], [is-desktop], ... on columns container. 
-Specifies on which viewports columns should be stacked *)
-type columns_responsive_modifier = 
-  [ `StackUpTo of column_viewport ]
+  type column_options =  [ `Multiline | `Centered ]
 
-(** Modifiers setting gap (or lack thereof) between columns:
-https://bulma.io/documentation/columns/gap/ *)
+  type columns_modifier = [ column_options | column_gap | columns_responsive_modifier ]
 
-(** [column_gap] modifiers are set on columns container. 
-They change a gap between contained columns. *)
-type column_gap = 
-  [ `Gapless (** [is-gapless] Removes the gap between columns. *)
-  | `GapSize of gap_sizes_numbers (** [is-0], ..., [is-8] custom gap modifier. 
-                                      TODO: [.is-variable] class will be added automatically. *) ]
+  type column_modifier = [ column_size_modifier | column_responsive_modifier ]
 
-(** Additional [.columns] container modifiers:
-https://bulma.io/documentation/columns/options/ *)
+  type column_related_modifier = [ columns_modifier | column_modifier ]
 
-type column_options = 
-  [ `Multiline (** [is-multiline] sets columns container to multiline mode *)
-  | `Centered (** [is-centered] centers contained columns *) ]
+  (* Helpers *)
 
-(** Modifiers for columns container *)
-type columns_modifier = [ column_options | column_gap | columns_responsive_modifier ]
+  let column_size_as_class_name: column_size -> string = function
+    | `Narrow -> "narrow"
+    | `Half -> "half"
+    | `OneThird -> "one-third"
+    | `OneQuarter -> "one-quarter"
+    | `ThreeQuarters -> "three-quarters"
+    | `OneFifth -> "one-fifth"
+    | `TwoFifths -> "two-fifths"
+    | `ThreeFifths -> "three-fifths"
+    | `FourFifths -> "four-fifths"
+    | #column_sizes_numbers as num -> number_as_class_name num
 
-(** Modifiers for columns *)
-type column_modifier = [ column_size_modifier | column_responsive_modifier ]
+  let viewport_as_class_name_part: column_viewport -> string = function
+    | `Mobile -> "mobile"
+    | `Desktop -> "desktop"
+    | `Widescreen -> "widescreen"
+    | `FullHD -> "fullhd"
 
-(** All column-related modifiers (both for columns container and columns themselves). *)
-type column_related_modifier = [ columns_modifier | column_modifier ]
+  let column_modifier_as_class_name: column_modifier -> string = function
+    | `Size column_size -> 
+      dash_join [ "is"; column_size_as_class_name column_size ]
+    | `Offset offset_size ->
+      dash_join [ "is-offset"; column_size_as_class_name offset_size ]
+    | `Is(column_size, viewport) ->
+      dash_join @@ [
+        "is"; 
+        column_size_as_class_name column_size; 
+        viewport_as_class_name_part viewport ]
 
-(* TODO: column layout helper generators:
-  - nested columns (https://bulma.io/documentation/columns/nesting/) *)
+  let columns_modifier_as_class_name: columns_modifier -> string = function
+    | `StackUpTo viewport -> 
+      dash_join [ "is"; viewport_as_class_name_part viewport ]
+    | `Multiline -> "is-multiline"
+    | `Centered -> "is-centered"
+    | `Gapless -> "is-gapless"
+    | `GapSize (#gap_sizes_numbers as gap_size) -> 
+      dash_join [ "is";  number_as_class_name gap_size ]
 
-let column_size_as_class_name: column_size -> string = function
-  | `Narrow -> "narrow"
-  | `Half -> "half"
-  | `OneThird -> "one-third"
-  | `OneQuarter -> "one-quarter"
-  | `ThreeQuarters -> "three-quarters"
-  | `OneFifth -> "one-fifth"
-  | `TwoFifths -> "two-fifths"
-  | `ThreeFifths -> "three-fifths"
-  | `FourFifths -> "four-fifths"
-  | #column_sizes_numbers as num -> number_as_class_name num
+  (* Exported *)
 
-let viewport_as_class_name_part: column_viewport -> string = function
-  | `Mobile -> "mobile"
-  | `Desktop -> "desktop"
-  | `Widescreen -> "widescreen"
-  | `FullHD -> "fullhd"
+  let as_class_name: column_related_modifier -> string = function
+    | #column_modifier as column_mod -> 
+      column_modifier_as_class_name column_mod
+    | #columns_modifier as columns_mod ->
+      columns_modifier_as_class_name columns_mod
 
-let column_modifier_as_class_name: column_modifier -> string = function
-  | `Size column_size -> 
-    dash_join [ "is"; column_size_as_class_name column_size ]
-  | `Offset offset_size ->
-    dash_join [ "is-offset"; column_size_as_class_name offset_size ]
-  | `Is(column_size, viewport) ->
-    dash_join @@ [
-      "is"; 
-      column_size_as_class_name column_size; 
-      viewport_as_class_name_part viewport ]
+  let column ?(opts=[]) content = 
+    let opts_classes = List.map (fun opt -> class' @@ column_modifier_as_class_name opt) opts in
+    let props = (class' "column")::opts_classes in
+    div props [ content ]
 
-let columns_modifier_as_class_name: columns_modifier -> string = function
-  | `StackUpTo viewport -> 
-    dash_join [ "is"; viewport_as_class_name_part viewport ]
-  | `Multiline -> "is-multiline"
-  | `Centered -> "is-centered"
-  | `Gapless -> "is-gapless"
-  | `GapSize (#gap_sizes_numbers as gap_size) -> 
-    dash_join [ "is";  number_as_class_name gap_size ]
+  let columns ?(opts=[]) ?(wrap=true) nodes = 
+    let columns = if wrap then List.map column nodes else nodes in
+    let opts_classes = List.map (fun opt -> class' @@ columns_modifier_as_class_name opt) opts in
+    let props = (class' "columns")::opts_classes in
+    div props columns
+end
 
-let as_class_name: column_related_modifier -> string = function
-  | #column_modifier as column_mod -> 
-    column_modifier_as_class_name column_mod
-  | #columns_modifier as columns_mod ->
-    columns_modifier_as_class_name columns_mod
+module Helpers = MakeModiferHelpers(struct 
+    include BlmColumnInner
+    type t = column_related_modifier
+  end)
 
-let column ?(opts=[]) content = 
-  let opts_classes = List.map (fun opt -> class' @@ column_modifier_as_class_name opt) opts in
-  let props = (class' "column")::opts_classes in
-  div props [ content ]
-
-let columns ?(opts=[]) ?(wrap=true) nodes = 
-  let columns = if wrap then List.map column nodes else nodes in
-  let opts_classes = List.map (fun opt -> class' @@ columns_modifier_as_class_name opt) opts in
-  let props = (class' "columns")::opts_classes in
-  div props columns
+include BlmColumnInner
+include Helpers
