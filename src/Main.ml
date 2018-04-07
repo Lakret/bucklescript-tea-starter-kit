@@ -352,15 +352,16 @@ let view model =
         ];
     ]
 
-let main = TEAFirstClassModules.FullApp.app
+let main = 
+  (* TEAFirstClassModules.FullApp.app *)
 
   (* beginnerProgram {
     model; update; view
   } *)
-(* 
+
   standardProgram {
     init;
     update = (fun model msg -> (update model msg, Tea_cmd.none));
     view;
     subscriptions = (fun _model -> Tea_sub.none)
-  } *)
+  }

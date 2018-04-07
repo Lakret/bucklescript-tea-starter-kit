@@ -132,8 +132,8 @@ Than models could be a map and we can do message processing in O(1) instead of O
  *)
 (* 'model -> 'msg -> 'model; *)
 (* (module SubappWithModel) list -> dyn -> (module SubappWithModel) list *)
-  let update (models: (module SubappWithModel) list) (msg: dyn) = 
-    match msg with 
+  let update (models: (module SubappWithModel) list) (msg: dyn) = failwith "foo"
+    (* match msg with 
     | Dyn(msg_type_key, message) ->
       (* TODO: use map instead of list find! *)
       let (module Target) = List.find (fun (module SAWM: SubappWithModel) -> 
@@ -143,7 +143,7 @@ Than models could be a map and we can do message processing in O(1) instead of O
       https://stackoverflow.com/questions/30429552/creating-gadt-expression-in-ocaml#
       maybe: Encoding Types in ML-like Languages paper *)
       models
-    | _ -> models
+    | _ -> models *)
 
   (* : (module SubappWithModel with type Subapp.msg = 'a) list -> 'a dyn Vdom.t *)
   let view (models: (module SubappWithModel) list)  = 
