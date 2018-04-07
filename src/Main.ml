@@ -301,7 +301,7 @@ let make_level ~props ~left_items ~right_items =
 
       div 
       [class' "level-right"] 
-      right_items
+      right_items;
     ]
 
 let view_model model = 
@@ -329,6 +329,9 @@ let hero () =
 
 let show_if cond node = if cond then node else noNode
 
+open BlmModifiers
+open BlmColumn
+
 let view model =
   (* let open BlmModifiers in *)
   div 
@@ -350,6 +353,27 @@ let view model =
           show_if (model <> 0) @@ 
             view_button ~is:[`IsDanger; `IsLarge] "Reset" Reset 
         ];
+
+(* TODO:
+  - check that BlmColumns and BlmModifiers have correct visibility (hiding by *.mli may be broken)
+  - add support for general modifiers in columns options OR add modifiers list as in Tea elements 
+  (e.g., color)
+  - how to pass raw Tea props to column? 
+  (e.g., onClick?)
+  
+  - Tiles
+  - Grid
+  - Buttons *)
+
+      columns ~opts:[`Centered; `GapSize `Four] ~wrap:false [
+        column ~opts:[`Is(`OneThird, `Mobile); `Size `Half] (
+          button 
+            [ class' "button" ]
+            (*TODO: [class' "button"; BlmModifiers.as_class `IsPrimary]  *)
+            [text "foo"]);
+        column (text "bar");
+        column (text "baz");
+      ]
     ]
 
 let main = 

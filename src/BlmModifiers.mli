@@ -28,7 +28,7 @@ type responsive_modifier =
   | `Hidden of viewport_width ]
 
 (** Helper modifiers 
-Docs: https://bulma.io/documentation/modifiers/helpers/ *)
+    Docs: https://bulma.io/documentation/modifiers/helpers/ *)
 
 type float_helper_modifier = [ `IsClearfix | `IsPulledLeft | `IsPulledRight ]
 

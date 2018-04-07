@@ -9,7 +9,7 @@ module BlmColumnInner = struct
     | `OneFifth | `TwoFifths | `ThreeFifths | `FourFifths 
     | column_sizes_numbers ]
 
-  type column_size_modifier =  [ `Size of column_size | `Offset of column_size ]
+  type column_size_modifier = [ `Size of column_size | `Offset of column_size ]
 
   type column_viewport = [ `Mobile | `Desktop | `Widescreen | `FullHD ]
 
@@ -76,15 +76,15 @@ module BlmColumnInner = struct
       columns_modifier_as_class_name columns_mod
 
   let column ?(opts=[]) content = 
-    let opts_classes = List.map (fun opt -> class' @@ column_modifier_as_class_name opt) opts in
-    let props = (class' "column")::opts_classes in
-    div props [ content ]
+    let opts_classes = List.map column_modifier_as_class_name opts in
+    let props = combine_class_names ~fixed:"column" opts_classes in
+    div [ props ] [ content ]
 
   let columns ?(opts=[]) ?(wrap=true) nodes = 
     let columns = if wrap then List.map column nodes else nodes in
-    let opts_classes = List.map (fun opt -> class' @@ columns_modifier_as_class_name opt) opts in
-    let props = (class' "columns")::opts_classes in
-    div props columns
+    let opts_classes = List.map columns_modifier_as_class_name opts in
+    let props = combine_class_names ~fixed:"columns" opts_classes in
+    div [ props ] columns
 end
 
 module Helpers = MakeModiferHelpers(struct 
